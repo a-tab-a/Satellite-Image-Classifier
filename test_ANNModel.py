@@ -106,7 +106,7 @@ criterion = nn.CrossEntropyLoss()
 #evaluation mood
 model.eval()
 
-
+conf_matrix = torch.zeros(4, 4)
 for i_batch,sample_batched in enumerate(test_loader):
     # move tensors to GPU if CUDA is available
     if train_on_gpu:
@@ -123,7 +123,27 @@ for i_batch,sample_batched in enumerate(test_loader):
         label = target.data[i]
         class_correct[label] += correct[i].item()
         class_total[label] += 1
+     for t, p in zip(target, all_pred):
+        conf_matrix[t, p] += 1
 
+print(conf_matrix)
+# calculate and print avg test loss
+test_loss = test_loss/len(test_loader.sampler)
+print('Test Loss: {:.6f}\n'.format(test_loss))
+
+TP = conf_matrix.diag()
+for c in range(4):
+    idx = torch.ones(4).byte()
+    idx[c] = 0
+    # all non-class samples classified as non-class
+    TN = conf_matrix[idx.nonzero()[:, None], idx.nonzero()].sum() 
+    # all non-class samples classified as class
+    FP = conf_matrix[idx, c].sum()
+    # all class samples not classified as class
+    FN = conf_matrix[c, idx].sum()
+    
+    print('Class {}\nTP {}, TN {}, FP {}, FN {}'.format(
+        c, TP[c], TN, FP, FN))
 # calculate and print avg test loss
 test_loss = test_loss/len(test_loader.sampler)
 print('Test Loss: {:.6f}\n'.format(test_loss))
